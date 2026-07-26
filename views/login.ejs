@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sign In · GroupCast</title>
+<link rel="stylesheet" href="/css/auth.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+<div class="auth-bg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="auth-container">
+  <div class="auth-card glass">
+    <div class="auth-brand">
+      <span class="brand-icon">📡</span>
+      <span class="brand-name">GroupCast</span>
+    </div>
+    <h1 class="auth-title">Welcome back</h1>
+    <p class="auth-sub">Sign in to your broadcasting dashboard.</p>
+
+    <% if (error) { %>
+    <div class="alert alert-error">
+      <span class="alert-icon">⚠</span> <%- error %>
+    </div>
+    <% } %>
+
+    <form method="POST" action="/login" class="auth-form">
+      <div class="form-group">
+        <label for="email">Work email</label>
+        <input type="email" id="email" name="email" placeholder="alex@company.com" required autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password"/>
+          <button type="button" class="toggle-pw" onclick="togglePw()" tabindex="-1">👁</button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Sign in →</button>
+    </form>
+
+    <p class="auth-link">No account? <a href="/signup">Get started free</a></p>
+  </div>
+</div>
+
+<script>
+function togglePw() {
+  const i = document.getElementById('password');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+</script>
+</body>
+</html>

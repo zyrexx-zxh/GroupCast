@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard · GroupCast</title>
+<link rel="stylesheet" href="/css/dashboard.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ── Ambient Background ──────────────────────────────────── -->
+<div class="dash-bg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- ── Sidebar ─────────────────────────────────────────────── -->
+<aside class="sidebar glass">
+  <div class="sidebar-brand">
+    <span class="brand-icon">📡</span>
+    <span class="brand-name">GroupCast</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="#compose"   class="nav-item active" data-section="compose">
+      <span class="nav-icon">✉️</span> Compose
+    </a>
+    <a href="#analytics" class="nav-item"         data-section="analytics">
+      <span class="nav-icon">📊</span> Analytics
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar"><%= name.charAt(0).toUpperCase() %></div>
+      <div class="user-info">
+        <span class="user-name"><%= name %></span>
+        <span class="user-handle">@<%= username %></span>
+      </div>
+    </div>
+    <a href="/logout" class="logout-btn" title="Sign out">↩</a>
+  </div>
+</aside>
+
+<!-- ── Main Content ───────────────────────────────────────── -->
+<main class="dash-main">
+
+  <!-- ── Top Bar ───────────────────────────────────────────── -->
+  <header class="dash-header">
+    <div class="header-left">
+      <h1 class="page-title" id="pageTitle">Compose Broadcast</h1>
+      <span class="wa-status" id="waStatus">
+        <span class="status-dot"></span> WhatsApp connected
+      </span>
+    </div>
+    <div class="header-right">
+      <div class="stat-chip">
+        <span class="chip-val" id="headerSentCount"><%= stats.totalSent %></span>
+        <span class="chip-label">messages sent</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Toast Notification ────────────────────────────────── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ════════════════════════════════════════════════════════
+       SECTION: Compose
+  ═══════════════════════════════════════════════════════════ -->
+  <section class="content-section" id="section-compose">
+
+    <div class="compose-grid">
+
+      <!-- LEFT — Groups Panel -->
+      <div class="panel glass" id="groupsPanel">
+        <div class="panel-header">
+          <h2 class="panel-title">My Groups</h2>
+          <button class="icon-btn" id="refreshGroupsBtn" title="Refresh groups">⟳</button>
+        </div>
+
+        <div class="groups-hint glass-sm">
+          <span>💡</span>
+          <p>Add your bot to a WhatsApp group, then type <code>@bot setup</code> to register it here.</p>
+        </div>
+
+        <!-- Select All -->
+        <div class="select-all-bar">
+          <label class="check-label">
+            <input type="checkbox" id="selectAll"/>
+            <span class="checkmark"></span>
+            Select all groups
+          </label>
+          <span class="group-count" id="groupCount">
+            <% if (groups.length > 0) { %>
+              <%= groups.length %> group<%= groups.length !== 1 ? 's' : '' %>
+            <% } else { %>
+              No groups yet
+            <% } %>
+          </span>
+        </div>
+
+        <!-- Group List -->
+        <div class="group-list" id="groupList">
+          <% if (groups.length === 0) { %>
+            <div class="empty-state">
+              <div class="empty-icon">💬</div>
+              <p>No groups registered yet.</p>
+              <p class="empty-hint">Add the bot to a WhatsApp group and type <code>@bot setup</code>.</p>
+            </div>
+          <% } else { %>
+            <% groups.forEach(function(group) { %>
+            <label class="group-item">
+              <input type="checkbox" class="group-checkbox" name="groupIds" value="<%= group.groupId %>"/>
+              <span class="checkmark"></span>
+              <div class="group-info">
+                <span class="group-name"><%= group.groupName %></span>
+                <span class="group-meta">ID: <%= group.groupId.substring(0, 20) %>…</span>
+              </div>
+              <span class="group-badge">Group</span>
+            </label>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- RIGHT — Message Composer -->
+      <div class="panel glass" id="composePanel">
+        <div class="panel-header">
+          <h2 class="panel-title">Message</h2>
+          <span class="char-count" id="charCount">0 / 4096</span>
+        </div>
+
+        <!-- Smart Templates -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">Smart Template</label>
+            <select class="select-field" id="templateSelect">
+              <option value="">— Choose a template —</option>
+              <option value="holiday">🎉 Holiday Notice</option>
+              <option value="meeting">📅 Urgent Meeting</option>
+              <option value="reminder">🔔 General Reminder</option>
+              <option value="announcement">📢 Company Announcement</option>
+              <option value="followup">📋 Follow-Up Request</option>
+              <option value="maintenance">🛠️ System Maintenance</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="field-label">Bilingual AI Translation</label>
+            <select class="select-field" id="languageSelect" name="language">
+              <option value="none">🚫 None</option>
+              <option value="hindi">🇮🇳 Append Hindi translation</option>
+              <option value="english">🇺🇸 Append English translation</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Message Textarea -->
+        <div class="form-group">
+          <label class="field-label">
+            Message
+            <span class="ai-badge">✨ AI Formatted</span>
+          </label>
+          <textarea
+            id="messageText"
+            class="message-area"
+            placeholder="Type your broadcast message here…&#10;&#10;GroupCast will use AI to format it with WhatsApp markdown, then optionally translate it."
+            maxlength="4096"
+          ></textarea>
+        </div>
+
+        <!-- Preview Box -->
+        <div class="preview-box" id="previewBox" style="display:none">
+          <div class="preview-header">
+            <span>📱 WhatsApp Preview</span>
+            <button type="button" class="icon-btn" onclick="closePreview()">✕</button>
+          </div>
+          <div class="preview-content" id="previewContent"></div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+          <div class="action-left">
+            <span class="selected-info" id="selectedInfo">No groups selected</span>
+          </div>
+          <div class="action-right">
+            <button type="button" class="btn-secondary" id="previewBtn">Preview AI output</button>
+            <button type="button" class="btn-primary" id="sendBtn">
+              <span id="sendBtnText">Send Broadcast</span>
+              <span id="sendBtnSpinner" class="spinner" style="display:none"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       SECTION: Analytics
+  ═══════════════════════════════════════════════════════════ -->
+  <section class="content-section hidden" id="section-analytics">
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card glass">
+        <div class="stat-icon">📨</div>
+        <div class="stat-body">
+          <div class="stat-number" id="statTotalSent"><%= stats.totalSent %></div>
+          <div class="stat-desc">Messages Delivered</div>
+        </div>
+      </div>
+      <div class="stat-card glass">
+        <div class="stat-icon">📡</div>
+        <div class="stat-body">
+          <div class="stat-number" id="statTotalCasts"><%= stats.totalCasts %></div>
+          <div class="stat-desc">Broadcasts Sent</div>
+        </div>
+      </div>
+      <div class="stat-card glass">
+        <div class="stat-icon">💬</div>
+        <div class="stat-body">
+          <div class="stat-number"><%= groups.length %></div>
+          <div class="stat-desc">Registered Groups</div>
+        </div>
+      </div>
+      <div class="stat-card glass">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-body">
+          <div class="stat-number" id="statSuccessRate">
+            <%
+              const total = stats.totalSent + (stats.totalFailed || 0);
+              const rate = total > 0 ? Math.round((stats.totalSent / total) * 100) : 100;
+            %>
+            <%= rate %>%
+          </div>
+          <div class="stat-desc">Delivery Rate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Broadcasts Table -->
+    <div class="panel glass" style="margin-top:24px">
+      <div class="panel-header">
+        <h2 class="panel-title">Recent Broadcasts</h2>
+        <button class="icon-btn" onclick="loadStats()">⟳</button>
+      </div>
+
+      <% if (recentBroadcasts.length === 0) { %>
+        <div class="empty-state" style="padding:40px">
+          <div class="empty-icon">📭</div>
+          <p>No broadcasts yet. Send your first message!</p>
+        </div>
+      <% } else { %>
+        <div class="broadcast-table-wrap">
+          <table class="broadcast-table">
+            <thead>
+              <tr>
+                <th>Message Preview</th>
+                <th>Groups</th>
+                <th>Delivered</th>
+                <th>Language</th>
+                <th>Sent</th>
+              </tr>
+            </thead>
+            <tbody id="broadcastTableBody">
+              <% recentBroadcasts.forEach(function(b) { %>
+              <tr>
+                <td class="msg-preview-cell">
+                  <span class="msg-preview"><%= b.message.substring(0, 60) %><%= b.message.length > 60 ? '…' : '' %></span>
+                </td>
+                <td>
+                  <% b.groupNames.slice(0,2).forEach(function(n) { %>
+                    <span class="group-tag"><%= n %></span>
+                  <% }) %>
+                  <% if (b.groupNames.length > 2) { %>
+                    <span class="group-tag muted">+<%= b.groupNames.length - 2 %></span>
+                  <% } %>
+                </td>
+                <td>
+                  <span class="delivery-badge sent"><%= b.sentCount %> sent</span>
+                  <% if (b.failCount > 0) { %>
+                  <span class="delivery-badge failed"><%= b.failCount %> failed</span>
+                  <% } %>
+                </td>
+                <td>
+                  <span class="lang-badge"><%= b.language === 'none' ? '—' : b.language %></span>
+                </td>
+                <td class="time-cell">
+                  <%= new Date(b.sentAt).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) %>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </section>
+
+</main>
+
+<script src="/js/dashboard.js"></script>
+</body>
+</html>

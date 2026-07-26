@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: groupcast
+    env: node
+    plan: starter          # Upgrade for always-on (free tier sleeps)
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false        # Set manually in Render dashboard
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+    # Puppeteer requires these system packages on Render:
+    # Add them via a build script or use a Docker image.
+    # See README for full Render puppeteer setup instructions.
