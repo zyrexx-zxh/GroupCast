@@ -1,13 +1,6 @@
-const nodemailer = require('nodemailer');
-const sgTransport = require('nodemailer-sendgrid-transport');
+const sgMail = require('@sendgrid/mail');
 
-const transporter = nodemailer.createTransport(
-  sgTransport({
-    auth: {
-      api_key: process.env.SENDGRID_API_KEY
-    }
-  })
-);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 /**
  * Send a styled OTP verification email.
@@ -40,7 +33,6 @@ async function sendOTPEmail(to, name, otp) {
   .otp-note  { font-size:12px; color:#888; margin-top:10px; }
   .divider { border:none; border-top:1px solid rgba(255,255,255,0.08); margin:28px 0; }
   .footer-text { font-size:12px; color:#555; line-height:1.8; }
-  .footer-text a { color:#25d366; text-decoration:none; }
   .footer { background:rgba(0,0,0,0.25); padding:20px 40px; text-align:center; font-size:11px; color:#444; }
 </style>
 </head>
@@ -71,9 +63,9 @@ async function sendOTPEmail(to, name, otp) {
 </html>`;
 
   try {
-    const info = await transporter.sendMail({
-      from: 'noreply@groupcast.com',
+    await sgMail.send({
       to,
+      from: 'noreply@groupcast.com',
       subject: `${otp} is your GroupCast verification code`,
       html
     });
