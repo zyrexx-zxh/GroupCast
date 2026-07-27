@@ -3,7 +3,7 @@ const qrcode                = require('qrcode-terminal');
 const Group                 = require('../models/Group');
 
 let whatsappClient = null;
-let botOwnerUserId = process.env.BOT_OWNER_USER_ID || null;
+let botOwnerUserId = null;
 
 function getClient() {
   return whatsappClient;
@@ -11,86 +11,64 @@ function getClient() {
 
 function setBotOwner(userId) {
   botOwnerUserId = userId;
-  console.log(`[WA] Bot owner set to userId: ${userId}`);
+  console.log(`[WA] Bot owner set to: ${userId}`);
 }
 
 async function initWhatsApp(mongooseConnection) {
-  console.log('[WA] Initializing WhatsApp client...');
+  console.log('[WA] Starting WhatsApp initialization...');
+  
+  try {
+    whatsappClient = new Client({
+      authStrategy: new LocalAuth(),
+      puppeteer: { headless: true }
+    });
 
-  whatsappClient = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu'
-      ]
-    }
-  });
+    whatsappClient.on('qr', (qr) => {
+      console.log('\n╔════════════════════════════════════════════╗');
+      console.log('║  SCAN THIS QR CODE WITH WHATSAPP          ║');
+      console.log('╚════════════════════════════════════════════╝\n');
+      qrcode.generate(qr, { small: true });
+      console.log('\n✓ QR code generated. Scan with your phone.\n');
+    });
 
-  whatsappClient.on('qr', (qr) => {
-    console.log('\n[WA] ══════════════════════════════════════════');
-    console.log('[WA]  📱 Scan this QR code with your WhatsApp app');
-    console.log('[WA] ══════════════════════════════════════════\n');
-    qrcode.generate(qr, { small: true });
-  });
+    whatsappClient.on('ready', () => {
+      console.log('[WA] ✅ WhatsApp connected and ready!\n');
+    });
 
-  whatsappClient.on('ready', () => {
-    console.log('[WA] ✅ WhatsApp client is ready!');
-  });
-
-  whatsappClient.on('auth_failure', (msg) => {
-    console.error('[WA] ❌ Auth failed:', msg);
-  });
-
-  whatsappClient.on('disconnected', (reason) => {
-    console.warn('[WA] ⚠️ Disconnected:', reason);
-  });
-
-  whatsappClient.on('message', async (msg) => {
-    try {
+    whatsappClient.on('message', async (msg) => {
       if (!msg.from.endsWith('@g.us')) return;
-      const body = msg.body.trim().toLowerCase();
-      if (body !== '@bot setup') return;
+      if (msg.body.toLowerCase().trim() !== '@bot setup') return;
+      if (!botOwnerUserId) return;
 
-      if (!botOwnerUserId) {
-        console.warn('[WA] No bot owner set');
-        return;
+      try {
+        const chat = await msg.getChat();
+        await Group.findOneAndUpdate(
+          { userId: botOwnerUserId, groupId: chat.id._serialized },
+          { userId: botOwnerUserId, groupId: chat.id._serialized, groupName: chat.name },
+          { upsert: true }
+        );
+        await msg.reply(`✅ Group registered!`);
+        console.log(`[WA] Group added: ${chat.name}`);
+      } catch (e) {
+        console.error('[WA] Error:', e.message);
       }
+    });
 
-      const chat = await msg.getChat();
-      const groupId   = chat.id._serialized;
-      const groupName = chat.name;
-
-      await Group.findOneAndUpdate(
-        { userId: botOwnerUserId, groupId },
-        { userId: botOwnerUserId, groupId, groupName },
-        { upsert: true, new: true }
-      );
-
-      await msg.reply(`✅ *GroupCast Setup Complete!*\n\n_${groupName}_ registered!`);
-      console.log(`[WA] ✓ Group registered: "${groupName}"`);
-    } catch (err) {
-      console.error('[WA] Error:', err.message);
-    }
-  });
-
-  await whatsappClient.initialize();
+    await whatsappClient.initialize();
+  } catch (err) {
+    console.error('[WA] Error:', err.message);
+  }
 }
 
 async function broadcastToGroups(groupIds, message) {
-  if (!whatsappClient) throw new Error('WhatsApp client not initialized');
-
+  if (!whatsappClient) throw new Error('Not initialized');
   let sent = 0, failed = 0;
   for (const gid of groupIds) {
     try {
       await whatsappClient.sendMessage(gid, message);
       sent++;
-      await new Promise(r => setTimeout(r, 1200));
-    } catch (err) {
-      console.error(`[WA] Failed to send to ${gid}:`, err.message);
+      await new Promise(r => setTimeout(r, 1000));
+    } catch (e) {
       failed++;
     }
   }
