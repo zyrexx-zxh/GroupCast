@@ -2,7 +2,6 @@ const express  = require('express');
 const router   = express.Router();
 const User     = require('../models/User');
 const OTP      = require('../models/OTP');
-const { sendOTPEmail } = require('../services/mailer');
 const { requireGuest } = require('../middleware/auth');
 const { setBotOwner }  = require('../services/whatsapp');
 
@@ -41,63 +40,14 @@ router.post('/signup', requireGuest, async (req, res) => {
     if (existingEmail)    return res.render('signup', { error: 'This email is already registered.', values });
     if (existingUsername) return res.render('signup', { error: 'Username is taken. Try another.', values });
 
-    // Generate OTP and store pending user data
-    const otp = generateOTP();
-    await OTP.findOneAndDelete({ email: email.toLowerCase() }); // clear old OTPs
-    await OTP.create({
+    // ✅ AUTO-VERIFY — Skip email, create user directly
+    const user = await User.create({
+      name,
       email: email.toLowerCase(),
-      otp,
-      userData: { name, email: email.toLowerCase(), username: username.toLowerCase(), password }
+      username: username.toLowerCase(),
+      password,
+      isVerified: true
     });
-
-    // Send styled email
-    await sendOTPEmail(email, name, otp);
-    console.log(`[AUTH] OTP sent to ${email}: ${otp}`); // visible in dev logs only
-
-    // Store email in session for /verify
-    req.session.pendingEmail = email.toLowerCase();
-    res.redirect('/verify');
-
-  } catch (err) {
-    console.error('[AUTH] Signup error:', err);
-    res.render('signup', { error: 'Something went wrong. Please try again.', values });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────────
-// GET /verify
-// ─────────────────────────────────────────────────────────────────
-router.get('/verify', (req, res) => {
-  if (!req.session.pendingEmail) return res.redirect('/signup');
-  res.render('verify', { error: null, email: req.session.pendingEmail });
-});
-
-// ─────────────────────────────────────────────────────────────────
-// POST /verify
-// ─────────────────────────────────────────────────────────────────
-router.post('/verify', async (req, res) => {
-  const { otp } = req.body;
-  const email   = req.session.pendingEmail;
-
-  if (!email) return res.redirect('/signup');
-
-  try {
-    const record = await OTP.findOne({ email });
-
-    if (!record) {
-      return res.render('verify', { error: 'OTP expired or not found. Please sign up again.', email });
-    }
-    if (record.otp !== otp.trim()) {
-      return res.render('verify', { error: 'Incorrect code. Please try again.', email });
-    }
-
-    // OTP valid → create the actual user
-    const { name, username, password } = record.userData;
-    const user = await User.create({ name, email, username, password, isVerified: true });
-
-    // Clean up OTP record
-    await OTP.findOneAndDelete({ email });
-    delete req.session.pendingEmail;
 
     // Log in immediately
     req.session.userId   = user._id;
@@ -107,12 +57,28 @@ router.post('/verify', async (req, res) => {
     // Assign this user as the WhatsApp bot owner
     setBotOwner(user._id.toString());
 
+    console.log(`[AUTH] User created and auto-verified: ${user.email}`);
     res.redirect('/dashboard');
 
   } catch (err) {
-    console.error('[AUTH] Verify error:', err);
-    res.render('verify', { error: 'Verification failed. Please try again.', email });
+    console.error('[AUTH] Signup error:', err);
+    res.render('signup', { error: 'Something went wrong. Please try again.', values });
   }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// GET /verify (DEPRECATED — kept for backwards compatibility)
+// ─────────────────────────────────────────────────────────────────
+router.get('/verify', (req, res) => {
+  // Auto-verify now, so redirect to signup or dashboard
+  res.redirect('/signup');
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /verify (DEPRECATED — kept for backwards compatibility)
+// ─────────────────────────────────────────────────────────────────
+router.post('/verify', (req, res) => {
+  res.redirect('/signup');
 });
 
 // ─────────────────────────────────────────────────────────────────
