@@ -1,15 +1,13 @@
 const nodemailer = require('nodemailer');
+const sgTransport = require('nodemailer-sendgrid-transport');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  connectionTimeout: 5000,
-  socketTimeout: 5000,
-  greetingTimeout: 5000
-});
+const transporter = nodemailer.createTransport(
+  sgTransport({
+    auth: {
+      api_key: process.env.SENDGRID_API_KEY
+    }
+  })
+);
 
 /**
  * Send a styled OTP verification email.
@@ -64,8 +62,7 @@ async function sendOTPEmail(to, name, otp) {
     </div>
     <hr class="divider" />
     <p class="footer-text">
-      If you didn't create a GroupCast account, you can safely ignore this email.<br/>
-      Need help? <a href="mailto:${process.env.EMAIL_USER}">Contact support</a>
+      If you didn't create a GroupCast account, you can safely ignore this email.
     </p>
   </div>
   <div class="footer">© ${new Date().getFullYear()} GroupCast · All rights reserved</div>
@@ -75,16 +72,16 @@ async function sendOTPEmail(to, name, otp) {
 
   try {
     const info = await transporter.sendMail({
-      from: `"GroupCast" <${process.env.EMAIL_USER}>`,
+      from: 'noreply@groupcast.com',
       to,
       subject: `${otp} is your GroupCast verification code`,
       html
     });
     
-    console.log(`[MAIL] ✓ OTP sent to ${to} (Message ID: ${info.messageId})`);
+    console.log(`[MAIL] ✓ OTP sent to ${to}`);
     return true;
   } catch (err) {
-    console.error(`[MAIL] ✗ Failed to send OTP to ${to}:`, err.message);
+    console.error(`[MAIL] ✗ Failed to send to ${to}:`, err.message);
     throw err;
   }
 }
