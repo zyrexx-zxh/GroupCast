@@ -4,8 +4,11 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS   // Gmail App Password
-  }
+    pass: process.env.EMAIL_PASS
+  },
+  connectionTimeout: 5000,
+  socketTimeout: 5000,
+  greetingTimeout: 5000
 });
 
 /**
@@ -70,12 +73,20 @@ async function sendOTPEmail(to, name, otp) {
 </body>
 </html>`;
 
-  await transporter.sendMail({
-    from: `"GroupCast" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `${otp} is your GroupCast verification code`,
-    html
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: `"GroupCast" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: `${otp} is your GroupCast verification code`,
+      html
+    });
+    
+    console.log(`[MAIL] ✓ OTP sent to ${to} (Message ID: ${info.messageId})`);
+    return true;
+  } catch (err) {
+    console.error(`[MAIL] ✗ Failed to send OTP to ${to}:`, err.message);
+    throw err;
+  }
 }
 
 module.exports = { sendOTPEmail };
