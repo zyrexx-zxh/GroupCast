@@ -15,7 +15,7 @@ async function sendOTPEmail(to, name, otp) {
 
   try {
     await transporter.sendMail({
-      from: 'noreply@groupcast.com',
+      from: 'TeamGroupCast@gmail.com',
       to,
       subject: `${otp} is your GroupCast verification code`,
       html
